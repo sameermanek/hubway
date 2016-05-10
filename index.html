@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Hubway Router</title>
+      <!-- ****** faviconit.com favicons ****** -->
+      <link rel="shortcut icon" href="/favicon.ico">
+      <link rel="icon" sizes="16x16 32x32 64x64" href="/favicon.ico">
+      <link rel="icon" type="image/png" sizes="196x196" href="/favicon-192.png">
+      <link rel="icon" type="image/png" sizes="160x160" href="/favicon-160.png">
+      <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png">
+      <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png">
+      <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+      <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+      <link rel="apple-touch-icon" href="/favicon-57.png">
+      <link rel="apple-touch-icon" sizes="114x114" href="/favicon-114.png">
+      <link rel="apple-touch-icon" sizes="72x72" href="/favicon-72.png">
+      <link rel="apple-touch-icon" sizes="144x144" href="/favicon-144.png">
+      <link rel="apple-touch-icon" sizes="60x60" href="/favicon-60.png">
+      <link rel="apple-touch-icon" sizes="120x120" href="/favicon-120.png">
+      <link rel="apple-touch-icon" sizes="76x76" href="/favicon-76.png">
+      <link rel="apple-touch-icon" sizes="152x152" href="/favicon-152.png">
+      <link rel="apple-touch-icon" sizes="180x180" href="/favicon-180.png">
+      <meta name="msapplication-TileColor" content="#FFFFFF">
+      <meta name="msapplication-TileImage" content="/favicon-144.png">
+      <meta name="msapplication-config" content="/browserconfig.xml">
+      <meta name="apple-mobile-web-app-capable" content="yes">
+      <!-- ****** faviconit.com favicons ****** -->
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        height: 100%;
+      }
+      .controls {
+        margin-top: 10px;
+        border: 1px solid transparent;
+        border-radius: 2px 0 0 2px;
+        box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        height: 32px;
+        outline: none;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      }
+
+      .controls {
+        background-color: #fff;
+        font-family: Roboto;
+        font-size: 15px;
+        font-weight: 300;
+        margin-left: 12px;
+        padding: 0 11px 0 13px;
+        text-overflow: ellipsis;
+        width: 300px;
+      }
+
+      .controls:focus {
+        border-color: #4d90fe;
+      }
+
+      .pac-container {
+        font-family: Roboto;
+      }
+
+      #go-button {
+        background-color: #5cb85c;
+      }
+      #go-button:active {
+        background-color: #fff;
+        border-color: #5cb85c;
+        border: 3px;
+      }
+      #type-selector {
+        color: #fff;
+        background-color: #4d90fe;
+        padding: 5px 11px 0px 11px;
+      }
+
+      #type-selector label {
+        font-family: Roboto;
+        font-size: 13px;
+        font-weight: 300;
+      }
+    </style>
+  </head>
+  <body>
+  <input id="starting-location" class="controls" type="text" placeholder="Starting Location">
+  <input id="ending-location" class="controls" type="text" placeholder="Ending Location">
+  <button id="go-button" class="controls" type="submit" onclick="calculateRoute()">Calculate Directions</button>
+  <span id="total-time" class="controls"></span>
+
+    <div id="map"></div>
+    <script>
+    // @todo Clean up the code 
+    // @todo use current location for start location
+    // @todo automatically route once we have a start and end location
+    // @todo Show estimated car/walk/transit times.
+    // @todo favicon/icons.
+    function initMap() {
+
+      // Make the map.
+      var map = new google.maps.Map(document.getElementById('map'), {
+        center: {lat: 42.3728137, lng: -71.1175233},
+        zoom: 14,
+        streetViewControl: false,
+        mapTypeControl: false,
+        mapTypeId: google.maps.MapTypeId.ROADMAP
+      });
+      // var infoWindow = new google.maps.InfoWindow({map: map});
+
+      // Add a bikelayer
+      var bikeLayer = new google.maps.BicyclingLayer();
+      bikeLayer.setMap(map);
+
+      var starting = document.getElementById('starting-location');
+      makeSearchBox(starting, map, 'markers/green_MarkerA.png');
+
+      var ending = document.getElementById('ending-location');
+      makeSearchBox(ending, map, 'markers/red_MarkerB.png');
+
+      // Add a listener to the starting and ending elements
+      // When either has changed, if both are filled, execute? Or add a 'go' button.
+      var button = document.getElementById("go-button");
+      map.controls[google.maps.ControlPosition.LEFT_TOP].push(button);
+
+      var totalTimeSpan = document.getElementById("total-time");
+      map.controls[google.maps.ControlPosition.LEFT_TOP].push(totalTimeSpan);
+      totalTimeSpan.style.visibility = "hidden";
+
+      // Try HTML5 geolocation.
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          var pos = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+
+          map.setCenter(pos);
+          // Also update the start location, if possible.
+          var url =   "https://maps.googleapis.com/maps/api/geocode/json?latlng=";
+          url += position.coords.latitude + ","
+          url += position.coords.longitude
+          url += "&key=AIzaSyCQODAY6twd-kCYbCc8qOP7PqdBNc1mOmU";
+
+          var xmlHttp = new XMLHttpRequest();
+      
+          xmlHttp.onreadystatechange = function() {
+          if(xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+            var location = JSON.parse(xmlHttp.responseText);
+
+            starting.setAttribute('data-address', location.results[0].formatted_address);
+            starting.setAttribute('data-placeid', location.results[0].place_id)
+
+            starting.value = location.results[0].formatted_address;
+
+          var marker = new google.maps.Marker({
+            map: map,
+            position: pos,
+            icon: 'markers/bluecircle.png'
+
+          });
+            return(true);
+          }
+        } // Close onreadystatechange function
+        xmlHttp.open("GET", url, true);
+        xmlHttp.send();
+          
+        }, function() {
+          return;
+        });
+      } else {
+        return;
+      } // Close if(navigator.geolocation)
+      window.myMap = map;
+    } // Close initMap
+
+    function makeSearchBox(input, map, marker) {
+      var searchBox = new google.maps.places.SearchBox(input);
+      map.controls[google.maps.ControlPosition.LEFT_TOP].push(input);
+
+      // Bias the starting location towards current viewport
+      map.addListener('bounds_changed', function() {
+        searchBox.setBounds(map.getBounds());
+      });
+
+      var markers = [];
+
+
+      searchBox.addListener('places_changed', function() {
+        var places = searchBox.getPlaces();
+        if(places.length == 0) {
+          return;
+        }
+
+        // Going to force it to only look at the first match.
+        places = [places[0]];
+        // Keeping the funky formatting (array of length 1) for now.
+        // Store this off somewhere.
+        // Ideally I should use the place_id. For now, going to stick w/ address.
+        input.setAttribute("data-address", places[0].formatted_address);
+        input.setAttribute("data-placeid", places[0].place_id);
+
+        // Clear out old markers
+        markers.forEach(function(marker) {
+          marker.setMap(null);
+        });
+
+        // For each place, get the icon, name, and location
+        var bounds = new google.maps.LatLngBounds();
+        places.forEach(function(place) {
+
+          // Create a marker for each place
+          markers.push(new google.maps.Marker({
+            map: map,
+            title: place.name,
+            position: place.geometry.location,
+            icon: marker
+
+          }));
+
+          if(place.geometry.viewport) {
+            bounds.union(place.geometry.viewport);
+          } else {
+            bounds.extend(place.geometry.location);
+          }
+        }); // Close places.forEach
+        map.setCenter(places[0].geometry.location);
+        wipeResults();
+        // @todo make this a little more sophisticated -- fit to the bounds of the starting and ending points.
+      }); // End the places_changed listener
+    } // end makeSearchBox.
+
+    function wipeResults() {
+      if(typeof window.myPaths == 'object') {
+        for(i = 0; i < window.myPaths.length; i++) {
+          window.myPaths[i].setMap(null);
+        }
+      }
+      var totalTimeSpan = document.getElementById("total-time");
+      totalTimeSpan.style.visibility = "hidden";
+    }
+
+
+    formatTime = function(totalSeconds) {
+      var hours = Math.floor(totalSeconds / 3600);
+      totalSeconds %= 3600;
+      var minutes = Math.floor(totalSeconds / 60);
+      totalSeconds %= 60;
+
+      var formatted = "";
+      if(hours > 0) {
+        formatted += hours + " hours, ";
+      }
+      if(minutes > 0) {
+        formatted += minutes + " minutes, ";
+      }
+      formatted += totalSeconds + " seconds";
+
+      return(formatted);
+    }
+
+
+    function calculateRoute() {
+      var start = document.getElementById("starting-location").getAttribute("data-address");
+      var end = document.getElementById("ending-location").getAttribute("data-address")
+      if(start == null || end == null) {
+        alert("Please enter a starting and ending location");
+      }
+
+      // Not sure, but I think I can pass this function the starting and ending locations
+      // then ajax a php script to pull the bikeshare routing (or all routes)
+      // then plot everything I want in js.
+      var xmlHttp = new XMLHttpRequest();
+      var requestURL =  "calculateBikeRoute.php" + 
+      "?start=" + encodeURIComponent(start) + 
+      "&end=" + encodeURIComponent(end);
+      // console.log(requestURL);
+      // Need to define a function to execute once I get a response.
+      // @todo.
+      xmlHttp.onreadystatechange = function() {
+        if(xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+          // This should display the total time and plot the appropriate paths.
+          // going to start simple.
+          var route = JSON.parse(xmlHttp.responseText);
+          window.routeResponse = route; // Just in case.
+
+          var totalTime = 0;
+          var paths = [];
+          for (i = 0; i < route.length; i++) {
+            var thisRoute = route[i];
+            totalTime += thisRoute.time;
+            var decodedPath = google.maps.geometry.encoding.decodePath(thisRoute.route);
+            var strokeColor = "red";
+            var strokeWeight = 2;
+            if(thisRoute.mode == "bicycling") {
+              strokeColor = "blue";
+              strokeWeight = 4;
+            } 
+            var path = new google.maps.Polyline({
+              clickable: false, // Should make this clickable w/ details.
+              map: window.myMap,
+              path: decodedPath,
+              strokeColor: strokeColor,
+              strokeOpacity: 1.0,
+              strokeWeight: strokeWeight,
+            })
+            paths.push(path);
+          } // Close for loop.
+          window.myPaths = paths;
+
+          console.log(totalTime);
+          var totalTimeSpan = document.getElementById("total-time");
+          while(totalTimeSpan.firstChild) {
+            totalTimeSpan.removeChild(totalTimeSpan.firstChild);
+          }
+          totalTimeSpan.appendChild( document.createTextNode("Expected time: " + formatTime(totalTime)));
+          totalTimeSpan.style.visibility = "visible";
+
+          return(true);
+        }
+        
+      } // Close onreadystatechange function
+      xmlHttp.open("GET", requestURL, true);
+      xmlHttp.send();
+      wipeResults();
+
+
+
+    }
+
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCQODAY6twd-kCYbCc8qOP7PqdBNc1mOmU&libraries=places,geometry&callback=initMap"
+    async defer></script>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-53387128-5', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+</body>
+</html>
