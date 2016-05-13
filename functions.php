@@ -341,8 +341,8 @@ function getBikeShareRoute($strGoogleApiKey, $strStartPlace, $strEndPlace) {
 // Not thinking about more complicated routes (uber + transit, bikeshare + transit, etc)
 function compareAlternatives($strGoogleApiKey, $strStartPlace, $strEndPlace) {
 	// First, get the appropriate sets of bike share locations
-	$aryCoordinatesStart = convertPlaceToCoordinates($strGoogleApiKey, $strStartAddress);
-	$aryCoordinatesEnd = convertPlaceToCoordinates($strGoogleApiKey, $strEndAddress);
+	$aryCoordinatesStart = convertPlaceToCoordinates($strGoogleApiKey, $strStartPlace);
+	$aryCoordinatesEnd = convertPlaceToCoordinates($strGoogleApiKey, $strEndPlace);
 
 	$objHubway = getHubwayData();
 

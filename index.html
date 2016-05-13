@@ -58,6 +58,10 @@
         width: 300px;
       }
 
+      .output {
+        height:128px;
+      }
+
       .controls:focus {
         border-color: #4d90fe;
       }
@@ -91,7 +95,7 @@
   <input id="starting-location" class="controls" type="text" placeholder="Starting Location">
   <input id="ending-location" class="controls" type="text" placeholder="Ending Location">
   <button id="go-button" class="controls" type="submit" onclick="calculateRoute()">Calculate Directions</button>
-  <span id="total-time" class="controls"></span>
+  <span id="total-time" class="controls" style="height: 128px; visibility:hidden;"></span>
 
     <div id="map"></div>
     <script>
@@ -287,7 +291,9 @@
         if(xmlHttp.readyState == 4 && xmlHttp.status == 200) {
           // This should display the total time and plot the appropriate paths.
           // going to start simple.
-          var route = JSON.parse(xmlHttp.responseText);
+          var response = JSON.parse(xmlHttp.responseText);
+          var route = response.route;
+          //var route = JSON.parse(xmlHttp.responseText);
           window.routeResponse = route; // Just in case.
 
           var totalTime = 0;
@@ -315,11 +321,23 @@
           window.myPaths = paths;
 
           console.log(totalTime);
+          // Clear in case of repeat search
           var totalTimeSpan = document.getElementById("total-time");
           while(totalTimeSpan.firstChild) {
             totalTimeSpan.removeChild(totalTimeSpan.firstChild);
           }
-          totalTimeSpan.appendChild( document.createTextNode("Expected time: " + formatTime(totalTime)));
+
+          // Format and concat the strings appropriately. 
+          var bikeshareText = "Bikeshare: " + formatTime(totalTime);
+          totalTimeSpan.appendChild( document.createTextNode(bikeshareText));
+          totalTimeSpan.appendChild( document.createElement("br"));
+
+          for (var key in response.alternatives) {
+            var alternativeText = key + ": " + formatTime(response.alternatives[key].total_time);
+            totalTimeSpan.appendChild( document.createTextNode(alternativeText));
+            totalTimeSpan.appendChild( document.createElement("br"));
+          }
+
           totalTimeSpan.style.visibility = "visible";
 
           return(true);

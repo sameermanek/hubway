@@ -46,16 +46,15 @@ foreach($aryRoute['waypoints'] as $aryWaypoint) {
 
 
 // For fun, grab the alternatives.
-//$aryAlternatives = compareAlternatives($strGoogleApiKey, urldecode($_REQUEST["start"]), urldecode($_REQUEST['end']));
+$aryAlternatives = compareAlternatives($strGoogleApiKey, urldecode($_REQUEST["start"]), urldecode($_REQUEST['end']));
 
 // Return
-//$aryJson = array(
-//	"route" => $aryRouteReturn,
-//	"alternatives" => $aryAlternatives
-//	);
+$aryJson = array(
+	"route" => $aryRouteReturn,
+	"alternatives" => $aryAlternatives
+	);
 
-//$strJson = json_encode($aryJson);
-$strJson = json_encode($aryRouteReturn);
+$strJson = json_encode($aryJson);
 print($strJson);
 
 ?>
