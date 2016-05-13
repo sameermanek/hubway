@@ -24,6 +24,17 @@ function convertAddressToCoordinates($strGoogleApiKey, $strAddress) {
 	return($aryCoordinates);
 }
 
+function convertPlaceToCoordinates($strGoogleApiKey, $strPlaceId) {
+	$strUrlBase = "https://maps.googleapis.com/maps/api/place/details/xml?";
+	$strUrlRequest = $strUrlBase . "key=" . $strGoogleApiKey . "&placeid=".urlencode($strPlaceId);
+	//echo "\n\n" . $strUrlRequest . "\n\n";
+	$objXml = simplexml_load_file($strUrlRequest);
+	//print_r($objXml);
+	$objCoordinates = $objXml->result->geometry->location;
+	$aryCoordinates = (array) $objCoordinates;
+	//var_dump($objXml->result);
+	return($aryCoordinates);
+}
 
 
 // As the crow flies distance. 
@@ -242,11 +253,12 @@ function generateMaps($strGoogleApiKey, &$aryRoutes) {
 
 // Get the bike sharing route
 // Returns lots of details about that route -- specific coordinates needed to draw polylines.
-function getBikeShareRoute($strGoogleApiKey, $strStartAddress, $strEndAddress) {
+// $strStartPlace and $strEndPlace are both google place ids
+function getBikeShareRoute($strGoogleApiKey, $strStartPlace, $strEndPlace) {
 
 	// First, get the appropriate sets of bike share locations
-	$aryCoordinatesStart = convertAddressToCoordinates($strGoogleApiKey, $strStartAddress);
-	$aryCoordinatesEnd = convertAddressToCoordinates($strGoogleApiKey, $strEndAddress);
+	$aryCoordinatesStart = convertPlaceToCoordinates($strGoogleApiKey, $strStartPlace);
+	$aryCoordinatesEnd = convertPlaceToCoordinates($strGoogleApiKey, $strEndPlace);
 	$objHubway = getHubwayData();
 
 	$aryBSStart = findClosestStations($objHubway, $aryCoordinatesStart, true, 2);
@@ -323,6 +335,39 @@ function getBikeShareRoute($strGoogleApiKey, $strStartAddress, $strEndAddress) {
 	return($aryBSOptions[$intQuickest]);
 }
 
-// Realistically, lots of this must be in js.
-// The UI in php would be ok... but not nearly good enough.
+
+// Look at all permutations from departure location, destination, and the appropriate set of waypoints
+// For now, just looking at transit, wakling, driving. 
+// Not thinking about more complicated routes (uber + transit, bikeshare + transit, etc)
+function compareAlternatives($strGoogleApiKey, $strStartPlace, $strEndPlace) {
+	// First, get the appropriate sets of bike share locations
+	$aryCoordinatesStart = convertPlaceToCoordinates($strGoogleApiKey, $strStartAddress);
+	$aryCoordinatesEnd = convertPlaceToCoordinates($strGoogleApiKey, $strEndAddress);
+
+	$objHubway = getHubwayData();
+
+	$aryOptions = array();
+
+
+	//var_dump($aryBSOptions);
+	//return($aryOptions);
+	// Then calculate the direct walking, driving, and transit routes.
+	$aryModes = array("walking","driving","transit");
+	$aryTimes = array();
+	foreach($aryModes as $strMode) {
+		$intTime = calculateTravelTime($strGoogleApiKey, $aryCoordinatesStart, $aryCoordinatesEnd, $strMode);
+		$aryTimes[$strMode] = array(
+			"total_time" => $intTime,
+			"waypoints" => array(
+				array(
+					"start" => $aryCoordinatesStart,
+					"end" => $aryCoordinatesEnd,
+					"mode" => $strMode)));
+	}
+	$aryOptions = array_merge($aryOptions, $aryTimes);
+	return($aryOptions);
+
+}
+
+// Realistically, could move a lot of this to JS.
 ?>

@@ -11,8 +11,8 @@ error_reporting(E_ALL);
 $objHubway = getHubwayData();
 $strGoogleApiKey = "AIzaSyCQODAY6twd-kCYbCc8qOP7PqdBNc1mOmU";
 
-// $_REQUEST['start'] = "1306 MAssachusetts Ave., Cambridge, MA";
-// $_REQUEST['end'] = "6 Marie Ave., Cambridge, MA";
+// $_REQUEST['start'] = "ChIJNZSnrBB644kRkMZeDxYBZTU";
+// $_REQUEST['end'] = "ChIJzaLYPEN344kR-L7IjX_82II";
 
 // $aryStart = convertAddressToCoordinates($strGoogleApiKey, urldecode($_REQUEST["start"]));
 // $aryEnd = convertAddressToCoordinates($strGoogleApiKey, urldecode($_REQUEST['end']));
@@ -44,6 +44,17 @@ foreach($aryRoute['waypoints'] as $aryWaypoint) {
 	array_push($aryRouteReturn, $aryReturn);
 }
 
+
+// For fun, grab the alternatives.
+//$aryAlternatives = compareAlternatives($strGoogleApiKey, urldecode($_REQUEST["start"]), urldecode($_REQUEST['end']));
+
+// Return
+//$aryJson = array(
+//	"route" => $aryRouteReturn,
+//	"alternatives" => $aryAlternatives
+//	);
+
+//$strJson = json_encode($aryJson);
 $strJson = json_encode($aryRouteReturn);
 print($strJson);
 

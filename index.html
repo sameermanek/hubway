@@ -148,10 +148,12 @@
 
           var xmlHttp = new XMLHttpRequest();
       
+
           xmlHttp.onreadystatechange = function() {
           if(xmlHttp.readyState == 4 && xmlHttp.status == 200) {
             var location = JSON.parse(xmlHttp.responseText);
 
+            // store off the attributes
             starting.setAttribute('data-address', location.results[0].formatted_address);
             starting.setAttribute('data-placeid', location.results[0].place_id)
 
@@ -265,8 +267,8 @@
 
 
     function calculateRoute() {
-      var start = document.getElementById("starting-location").getAttribute("data-address");
-      var end = document.getElementById("ending-location").getAttribute("data-address")
+      var start = document.getElementById("starting-location").getAttribute("data-placeid");
+      var end = document.getElementById("ending-location").getAttribute("data-placeid")
       if(start == null || end == null) {
         alert("Please enter a starting and ending location");
       }
